@@ -109,7 +109,7 @@
     FuelSubtype? _selectedFuelSubtype;
     final List<String> _quantities = const ['3 L', '6 L', '8 L', '10 L', '12 L', '16 L', '18 L', '20 L'];
     String? _selectedQuantity;
-    final List<String> _paymentTypes = const ['Cash', 'Credit Card', 'Online Payment'];
+    final List<String> _paymentTypes = const ['Cash', 'Card'];
     String? _selectedPaymentType;
     Timer? _debounce;
     String _cardholderName = '';
@@ -243,7 +243,7 @@
       final response = await http.get(
         Uri.parse(shortUrl),
         headers: {
-          // Mimic a real browser to get full HTML response
+   
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                         '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
         },
@@ -253,11 +253,11 @@
 
       if (response.statusCode == 200) {
         final body = response.body;
-        // Try several regex patterns to find a Google Maps URL inside the HTML
+
         final patterns = [
           RegExp(r'href="(https://www\.google\.com/maps/[^"]+)"'),
-          RegExp(r'"(https://www\.google\.com/maps/[^"]+)"'), // sometimes inside quotes
-          RegExp(r'https://www\.google\.com/maps/[^"\s]+'),  // just the URL itself anywhere
+          RegExp(r'"(https://www\.google\.com/maps/[^"]+)"'),
+          RegExp(r'https://www\.google\.com/maps/[^"\s]+'),  
         ];
 
         for (final regex in patterns) {
@@ -286,7 +286,7 @@
   }
 
 
-  // --- Add this too ---
+
   Map<String, double>? extractCoordinatesFromUrl(String url) {
     final regex = RegExp(r'/@(-?\d+\.\d+),(-?\d+\.\d+)');
     final match = regex.firstMatch(url);
@@ -308,7 +308,7 @@
       return await Geolocator.getCurrentPosition();
     }
 
-    bool get _isCardPayment => _selectedPaymentType == 'Credit Card';
+    bool get _isCardPayment => _selectedPaymentType == 'Card';
 
     void _startLocationUpdates() async {
       // Cancel any existing position stream
@@ -370,7 +370,6 @@
       return;
     }
 
-    // --- Add recipient validation here ---
     if (_bookingForSomeoneElse) {
       if (_recipientName.trim().isEmpty) {
         _showSnack('Please enter recipient name');
@@ -859,7 +858,6 @@
             ),
           ),
           const SizedBox(height: 16),
-        // _infoText('Delivery Charge', 'LKR ${_deliveryCharge.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           _infoText('Payment Method', _selectedPaymentType ?? 'N/A'),
           const SizedBox(height: 8),

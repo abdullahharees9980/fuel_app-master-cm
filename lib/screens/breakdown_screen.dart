@@ -32,7 +32,8 @@ class _BreakdownScreenState extends State<BreakdownScreen> {
   late StreamSubscription<ConnectivityResult> _connectivitySubscription;
    bool _hasInternet = true;
 
-  final List<String> _vehicles = [// Cars
+  final List<String> _vehicles = [
+    // Cars
   'Toyota Corolla',
   'Toyota Prius',
   'Toyota Land Cruiser',

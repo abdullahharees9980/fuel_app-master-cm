@@ -62,7 +62,7 @@ Future<void> _showEmailVerificationDialog(User user) async {
           title: const Text('Verify your email'),
           content: const Text(
             'A verification link has been sent to your email.\n\n'
-            'Please check your inbox and verify your account.'
+            'Please check your inbox or spam and verify your account.'
           ),
         ),
       );
@@ -105,7 +105,7 @@ Future<void> _showEmailVerificationDialog(User user) async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    // Trim inputs explicitly to avoid whitespace issues
+
     _email = _email.trim();
     _name = _name.trim();
     _password = _password.trim();
