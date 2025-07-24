@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1075562726618",
+    "project_id": "fuel-app-756ae",
+    "storage_bucket": "fuel-app-756ae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1075562726618:android:9c97cb7972335cab5251e3",
+        "android_client_info": {
+          "package_name": "com.example.fuel_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1075562726618-vu3vk4kj1q5h9mhfo9n67mon1epi5ar5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fuel_app",
+            "certificate_hash": "0f9d767c2dced6f63a657d386bfc045c254d5e6a"
+          }
+        },
+        {
+          "client_id": "1075562726618-e8adlmjjkafsj45to0u88seclsnupk9o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCv28d9asgZf31YfMzchn4rCnh5CfWD6Lc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1075562726618-e8adlmjjkafsj45to0u88seclsnupk9o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
