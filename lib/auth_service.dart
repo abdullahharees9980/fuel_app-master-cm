@@ -135,6 +135,7 @@ Future<String?> register({
 
   /// Logout
   Future<void> logout() async {
+    print('Logging out...');
     await _auth.signOut();
     await _googleSignIn.signOut();
     user = null;

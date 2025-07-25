@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../auth_service.dart';
+import '../main.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -127,6 +128,12 @@ Widget build(BuildContext context) {
                                 ),
                                 onPressed: () async {
                                   await auth.logout();
+                                  if (context.mounted) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => AuthWrapper()),
+      (route) => false,
+    );
+  }
                                 },
                               ),
                             ],
