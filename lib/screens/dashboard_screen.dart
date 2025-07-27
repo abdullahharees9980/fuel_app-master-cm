@@ -283,10 +283,11 @@ class DashboardContent extends StatelessWidget {
                   }
 
                   final allOrders = snapshot.data?.docs ?? [];
-                  final orders = allOrders.where((doc) {
-                    final status = (doc['status'] ?? '').toString().toLowerCase();
-                    return status.contains('accepted') || status.contains('delivered');
-                  }).toList();
+            final orders = allOrders.where((doc) {
+  final status = (doc['status'] ?? '').toString().toLowerCase();
+  return status.contains('accepted') || status.contains('delivered') || status.contains('picked');
+}).toList();
+
 
                   if (orders.isEmpty) {
                     return Center(
@@ -319,7 +320,8 @@ class DashboardContent extends StatelessWidget {
                       else if (status == 'delivered') statusColor = Colors.greenAccent;
                       else if (status == 'accepted') statusColor = Colors.blueAccent;
 
-                      final ongoingStatuses = ['accepted', 'process_order', 'picked'];
+                     final ongoingStatuses = ['accepted', 'process_order', 'picked', 'order_picked'];
+
 
                       return Card(
                         color: const Color(0xFF1F1F1F),
