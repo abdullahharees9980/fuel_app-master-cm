@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:fuel_app/screens/register_screen.dart';
@@ -51,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
   }
 
-  // New method to save FCM token after login
   Future<void> saveFcmTokenToFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -197,19 +196,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 _showError(null);
                               });
 
-                              final res = await auth.login(email: email.trim(), password: password.trim());
+                      final res = await auth.login(email: email.trim(), password: password.trim());
 
-                              if (!mounted) return;
+if (!mounted) return;
 
-                              if (res == null) {
-                                // Login successful, save FCM token
-                                await saveFcmTokenToFirestore();
-                              } else {
-                                setState(() {
-                                  _showError(res);
-                                  loading = false;
-                                });
-                              }
+if (res == null) {
+
+  await saveFcmTokenToFirestore();
+
+  if (mounted) {
+    setState(() {
+      loading = false;
+    });
+
+  
+    Navigator.of(context).pushReplacementNamed('/main');
+  }
+} else {
+  setState(() {
+    _showError(res);
+    loading = false;
+  });
+}
+
                             }
                           },
                         ),
@@ -221,25 +230,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     _showError(null);
                   });
 
-                  final res = await auth.signInWithGoogle();
+     final res = await auth.signInWithGoogle();
 
-                  if (!mounted) return;
+if (!mounted) return;
 
-                  if (res != null) {
-                    setState(() {
-                      _showError(res);
-                      loading = false;
-                    });
-                  } else {
-                    await FirebaseAuth.instance.currentUser?.reload(); // <- Ensure user is fresh
-                    await saveFcmTokenToFirestore(); // <- Save FCM token
-                    if (mounted) {
-                      setState(() {
-                        loading = false;
-                      });
-                    }
-                      
-                  }
+if (res != null) {
+  setState(() {
+    _showError(res);
+    loading = false;
+  });
+} else {
+  await FirebaseAuth.instance.currentUser?.reload();
+  await saveFcmTokenToFirestore();
+
+  if (mounted) {
+    setState(() {
+      loading = false;
+    });
+
+
+    Navigator.of(context).pushReplacementNamed('/main');
+  }
+}
+
                         }),
 
                         const SizedBox(height: 30),

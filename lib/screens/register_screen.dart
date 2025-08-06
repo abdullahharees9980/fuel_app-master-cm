@@ -8,6 +8,8 @@ import 'package:fuel_app/main.dart';
 import 'package:provider/provider.dart';
 import '../auth_service.dart';
 import 'dashboard_screen.dart';
+import 'email_verification.dart';  
+
 
 class RegistrationScreen extends StatefulWidget {
   static const routeName = '/register';
@@ -101,45 +103,52 @@ Future<void> _showEmailVerificationDialog(User user) async {
     });
   }
 
-  Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
+Future<void> _register() async {
+  if (!_formKey.currentState!.validate()) return;
+  _formKey.currentState!.save();
 
+  _email = _email.trim();
+  _name = _name.trim();
+  _password = _password.trim();
 
-    _email = _email.trim();
-    _name = _name.trim();
-    _password = _password.trim();
+  setState(() {
+    _isLoading = true;
+    _showError(null);
+  });
 
-    setState(() {
-      _isLoading = true;
-      _showError(null);
-    });
+  final auth = Provider.of<AuthService>(context, listen: false);
 
-    final auth = Provider.of<AuthService>(context, listen: false);
-   final error = await auth.register(
-  email: _email,
-  password: _password,
-  name: _name,
-);
-
+  try {
+    final error = await auth.register(
+      email: _email,
+      password: _password,
+      name: _name,
+    );
 
     if (error == null) {
       await Future.delayed(const Duration(milliseconds: 300));
-      if (auth.user != null) {
-        if (!mounted) return;
-      await _showEmailVerificationDialog(auth.user!);
+      if (!mounted) return;
 
-      } else {
-        _showError('User creation succeeded but login failed. Try again.');
-      }
+      // ✅ Navigate to email verification screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
+      );
     } else {
       _showError(error);
     }
-
-    setState(() {
-      _isLoading = false;
-    });
+  } on FirebaseAuthException catch (e) {
+    if (e.code == 'email-already-in-use') {
+      _showError('User already exists with this email.');
+    } else {
+      _showError('Registration failed: ${e.message}');
+    }
+  } catch (e) {
+    _showError('An unexpected error occurred. Please try again.');
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
+
 
   Widget _buildTextField({
     required String label,

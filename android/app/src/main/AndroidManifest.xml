@@ -16,7 +16,8 @@
     <application
         android:name="${applicationName}"
         android:label="fuel_app"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        tools:replace="android:label">
 
         <!-- Notification Channel -->
         <meta-data
@@ -46,6 +47,13 @@
             </intent-filter>
         </activity>
 
+        <!-- PayHere Activity -->
+        <activity
+            android:name="lk.payhere.androidsdk.PHMainActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/PHTheme"
+            tools:replace="android:theme" />
+
         <!-- Awesome Notifications: Reschedule after reboot -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
@@ -57,17 +65,16 @@
         </receiver>
 
         <!-- Provider required by share_plus plugin -->
-<provider
-    android:name="dev.fluttercommunity.plus.share.ShareFileProvider"
-    android:authorities="${applicationId}.flutter.share_provider"
-    android:exported="false"
-    android:grantUriPermissions="true">
-    <meta-data
-        android:name="android.support.FILE_PROVIDER_PATHS"
-        android:resource="@xml/flutter_share_file_paths"
-        tools:replace="android:resource"/>
-</provider>
-
+        <provider
+            android:name="dev.fluttercommunity.plus.share.ShareFileProvider"
+            android:authorities="${applicationId}.flutter.share_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/flutter_share_file_paths"
+                tools:replace="android:resource"/>
+        </provider>
 
         <!-- Flutter V2 embedding -->
         <meta-data

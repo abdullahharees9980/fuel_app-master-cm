@@ -10,6 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:fuel_app/main_screen.dart';
 import 'package:share_plus/share_plus.dart'; 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'dart:math' as Math;
+
 
 
 
@@ -28,6 +30,30 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   LatLng? _dropoffLoc;
   LatLng? _driverLoc;
   String _status = 'process_order';
+  LatLng? _prevDriverLoc;
+  LatLng? _animatedDriverLoc;
+  Timer? _driverAnimTimer;
+  bool _followDriver = true;
+  BitmapDescriptor? _driverIcon;
+  double _driverBearing = 0;
+double _calculateBearing(LatLng start, LatLng end) {
+  final lat1 = _degreesToRadians(start.latitude);
+  final lon1 = _degreesToRadians(start.longitude);
+  final lat2 = _degreesToRadians(end.latitude);
+  final lon2 = _degreesToRadians(end.longitude);
+
+  final dLon = lon2 - lon1;
+
+  final y = Math.sin(dLon) * Math.cos(lat2);
+  final x = Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+  final bearing = Math.atan2(y, x);
+  return (_radiansToDegrees(bearing) + 360) % 360;
+}
+
+double _degreesToRadians(double degrees) => degrees * (Math.pi / 180);
+double _radiansToDegrees(double radians) => radians * (180 / Math.pi);
 
   List<LatLng> _routePoints = [];
 
@@ -62,6 +88,15 @@ String generateShareMessage() {
 
   static const _apiKey = 'AIzaSyA40-Fss_E_pbEKyCvMJqL_DDJxkAOrdec';
 
+Future<void> _loadDriverIcon() async {
+_driverIcon = await BitmapDescriptor.fromAssetImage(
+  const ImageConfiguration(size: Size(1, 1)),
+  'assets/images/bike.png',
+);
+
+  print('Driver icon loaded: $_driverIcon');
+  if (mounted) setState(() {});
+}
 
 
   final Map<String, int> _statusIndex = {
@@ -79,6 +114,7 @@ String generateShareMessage() {
   @override
   void initState() {
     super.initState();
+      _loadDriverIcon();
     _listenOrder();
   }
 
@@ -109,18 +145,18 @@ void _shareViaWhatsApp() async {
 
 
 
-void _testWhatsAppLaunch() async {
-  final url = Uri.parse("whatsapp://send?text=Hello%20from%20Flutter");
+// void _testWhatsAppLaunch() async {
+//   final url = Uri.parse("whatsapp://send?text=Hello%20from%20Flutter");
 
-  if (await canLaunchUrl(url)) {
-    await launchUrl(url, mode: LaunchMode.externalApplication);
-  } else {
-    debugPrint('WhatsApp not available');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('WhatsApp not found or cannot be launched')),
-    );
-  }
-}
+//   if (await canLaunchUrl(url)) {
+//     await launchUrl(url, mode: LaunchMode.externalApplication);
+//   } else {
+//     debugPrint('WhatsApp not available');
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       const SnackBar(content: Text('WhatsApp not found or cannot be launched')),
+//     );
+//   }
+// }
 
 
 
@@ -143,6 +179,39 @@ void _shareViaSMS() async {
   }
 }
 
+void _animateDriverMovement(LatLng from, LatLng to) {
+  _driverAnimTimer?.cancel();
+
+  const duration = Duration(seconds: 2);
+  final start = DateTime.now();
+  final end = start.add(duration);
+
+  _driverAnimTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+    final now = DateTime.now();
+    if (now.isAfter(end)) {
+      _animatedDriverLoc = to;
+      timer.cancel();
+      if (_followDriver && _mapController != null) {
+  _mapController!.animateCamera(
+    CameraUpdate.newLatLng(_animatedDriverLoc!),
+  );
+}
+
+if (mounted) setState(() {});
+
+      return;
+    }
+
+    final t = (now.difference(start).inMilliseconds) / duration.inMilliseconds;
+    final lat = _lerp(from.latitude, to.latitude, t);
+    final lng = _lerp(from.longitude, to.longitude, t);
+
+    _animatedDriverLoc = LatLng(lat, lng);
+    if (mounted) setState(() {});
+  });
+}
+
+double _lerp(double a, double b, double t) => a + (b - a) * t;
 
 
 
@@ -173,12 +242,24 @@ void _shareViaSMS() async {
         _status = newStatus;
       }
 
-      final driverGeo = data['driverLocation'] as GeoPoint?;
-      if (driverGeo != null) {
-        _driverLoc = LatLng(driverGeo.latitude, driverGeo.longitude);
-        _centerMap(_driverLoc!);
-        _updateRoute();
-      }
+ final driverGeo = data['driverLocation'] as GeoPoint?;
+if (driverGeo != null) {
+  final newLoc = LatLng(driverGeo.latitude, driverGeo.longitude);
+
+  if (_driverLoc != null) {
+    // Calculate bearing from old to new location
+    _driverBearing = _calculateBearing(_driverLoc!, newLoc);
+
+    // Animate the movement
+    _animateDriverMovement(_driverLoc!, newLoc);
+  } else {
+    _animatedDriverLoc = newLoc; // first time driver location
+  }
+
+  _driverLoc = newLoc; // update driver location
+  _updateRoute();
+}
+
 
       _driverName = data['driverName'] ?? 'Unknown';
       _driverPhone = data['driverPhone'] ?? 'Unknown';
@@ -270,41 +351,45 @@ void _shareViaSMS() async {
     }
   }
 
-  Future<void> _cancelOrder() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Order'),
-        content: const Text('Are you sure you want to cancel this order?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
-        ],
-      ),
+Future<void> _cancelOrder() async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Cancel Order'),
+      content: const Text('Are you sure you want to cancel this order?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+      ],
+    ),
+  );
+
+  if (confirm == true) {
+    await FirebaseFirestore.instance
+        .collection('orders')
+        .doc(widget.orderId)
+        .update({'status': 'cancelled'});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order has been cancelled')),
     );
 
-    if (confirm == true) {
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(widget.orderId)
-          .update({'status': 'cancelled'});
+    await Future.delayed(const Duration(milliseconds: 500));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Order has been cancelled')),
-      );
 
-      // Wait for snackbar to show
-      await Future.delayed(const Duration(milliseconds: 500));
+    _orderSub?.cancel();
+    _driverAnimTimer?.cancel();
 
-      // Navigate to dashboard
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => MainScreen()),
-        (route) => false,
-      );
-    }
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => MainScreen()),
+      (route) => false,
+    );
   }
+}
+
 
  @override
 Widget build(BuildContext context) {
@@ -321,14 +406,19 @@ Widget build(BuildContext context) {
       infoWindow: const InfoWindow(title: 'Drop-off'),
     ));
   }
-  if (_driverLoc != null) {
-    markers.add(Marker(
-      markerId: const MarkerId('driver'),
-      position: _driverLoc!,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      infoWindow: const InfoWindow(title: 'Driver'),
-    ));
-  }
+if (_animatedDriverLoc != null) {
+  markers.add(Marker(
+    markerId: const MarkerId('driver'),
+    position: _animatedDriverLoc!,
+    icon: _driverIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+    rotation: _driverBearing,
+    anchor: const Offset(0.5, 0.5),  // rotate around icon center
+    infoWindow: const InfoWindow(title: 'Driver'),
+  ));
+}
+
+
+
 
   final polylines = <Polyline>{};
   if (_routePoints.isNotEmpty) {
@@ -336,7 +426,7 @@ Widget build(BuildContext context) {
       polylineId: const PolylineId('route'),
       points: _routePoints,
       width: 5,
-      color: Colors.amber,
+      color: Colors.black,
     ));
   }
 
@@ -347,6 +437,16 @@ Widget build(BuildContext context) {
       backgroundColor: Colors.black,
       centerTitle: true,
     ),
+    floatingActionButton: FloatingActionButton(
+  backgroundColor: Colors.amber,
+  child: Icon(_followDriver ? Icons.gps_fixed : Icons.gps_off, color: Colors.black),
+  onPressed: () {
+    setState(() {
+      _followDriver = !_followDriver;
+    });
+  },
+),
+
     body: LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(

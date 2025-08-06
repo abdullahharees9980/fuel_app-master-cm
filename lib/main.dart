@@ -3,7 +3,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
+import 'package:fuel_app/screens/email_verification.dart';
 import 'package:provider/provider.dart';
 import 'auth_service.dart';
 import 'screens/login_screen.dart';
@@ -11,7 +12,7 @@ import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/fuel_screen.dart';
 import 'screens/order_tracking_screen.dart';
-import 'screens/lubricants_screen.dart';
+// import 'screens/lubricants_screen.dart';
 import 'screens/breakdown_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/order_screen.dart';
@@ -19,7 +20,6 @@ import 'widgets/bottom_navbar.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:flutter/material.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -41,9 +41,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Initialize Awesome Notifications
+  
   AwesomeNotifications().initialize(
-    null, // Use default app icon
+    null, 
     [
       NotificationChannel(
         channelKey: 'high_importance',
@@ -79,12 +79,13 @@ class FuelApp extends StatelessWidget {
           scaffoldBackgroundColor: Colors.black,
           primarySwatch: Colors.amber,
         ),
-        home: AuthWrapper(),
+        home: const AuthWrapper(),
         routes: {
           '/login': (context) => LoginScreen(),
           '/register': (context) => RegistrationScreen(),
           '/dashboard': (context) => DashboardScreen(),
           '/profile': (context) => ProfileScreen(),
+          '/main': (context) => MainScreen(),
         },
         debugShowCheckedModeBanner: false,
       ),
@@ -93,6 +94,8 @@ class FuelApp extends StatelessWidget {
 }
 
 class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -103,11 +106,38 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasData) {
-          return MainScreen();
-        } else {
-          return LoginScreen();
+
+        final user = snapshot.data;
+
+        if (user == null) {
+          return const LoginScreen();
         }
+
+        return FutureBuilder<void>(
+          future: user.reload(), // Refresh user data
+          builder: (context, reloadSnapshot) {
+            if (reloadSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final refreshedUser = FirebaseAuth.instance.currentUser!;
+            final providerIds = refreshedUser.providerData.map((p) => p.providerId).toList();
+
+
+            print('User: $refreshedUser');
+            print('Email Verified: ${refreshedUser.emailVerified}');
+            print('Provider IDs: $providerIds');
+
+            if (!refreshedUser.emailVerified && !providerIds.contains('google.com')) {
+
+              return const EmailVerificationScreen();
+            }
+
+            return MainScreen();
+          },
+        );
       },
     );
   }
@@ -125,10 +155,9 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
 
-    // Request notification permission (especially on iOS)
     FirebaseMessaging.instance.requestPermission();
 
-    // Listen for foreground messages and show notifications
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (message.notification != null) {
         AwesomeNotifications().createNotification(
@@ -142,7 +171,7 @@ class _MainScreenState extends State<MainScreen> {
       }
     });
 
-    // Optionally print the FCM token for testing
+
     FirebaseMessaging.instance.getToken().then((token) {
       print('FCM Token: $token');
     });

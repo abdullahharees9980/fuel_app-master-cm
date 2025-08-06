@@ -12,10 +12,11 @@ class AuthService extends ChangeNotifier {
   User? user;
 
   AuthService() {
-    _auth.authStateChanges().listen((User? u) {
-      user = u;
-      notifyListeners();
-    });
+_auth.authStateChanges().listen((User? u) {
+  user = u;
+  print('🔄 Auth state changed: ${u?.email ?? 'No user'}');
+  notifyListeners();
+});
   }
 
   /// Save FCM token to Firestore
@@ -38,6 +39,7 @@ Future<String?> register({
   required String name,
 }) async {
   try {
+    // Create user in Firebase Auth
     UserCredential cred = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password.trim(),
@@ -45,6 +47,7 @@ Future<String?> register({
 
     user = _auth.currentUser;
 
+    // Save additional info to Firestore
     await _firestore.collection('users').doc(user!.uid).set({
       'userId': user!.uid,
       'name': name.trim(),
@@ -54,9 +57,10 @@ Future<String?> register({
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-
+    // Send email verification
     await user!.sendEmailVerification();
 
+    // Optionally save FCM token
     await _saveFcmTokenToFirestore();
 
     notifyListeners();
@@ -68,6 +72,8 @@ Future<String?> register({
     return 'An unexpected error occurred during registration.';
   }
 }
+
+
 
 
   
@@ -96,49 +102,65 @@ Future<String?> register({
   }
 
   /// Google Sign-In
-  Future<String?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return 'Sign in aborted by user';
+ Future<String?> signInWithGoogle() async {
+  try {
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return 'Sign in aborted by user';
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
 
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
-      user = _auth.currentUser;
+    UserCredential userCredential = await _auth.signInWithCredential(credential);
+    user = _auth.currentUser;
 
-      final userDoc = await _firestore.collection('users').doc(user!.uid).get();
-      if (!userDoc.exists) {
-        await _firestore.collection('users').doc(user!.uid).set({
-          'userId': user!.uid,
-          'name': user!.displayName ?? 'No Name',
-          'email': user!.email ?? '',
-          'role': 'user',
-          'address': '',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-      await user!.sendEmailVerification();
-      await _saveFcmTokenToFirestore(); 
+    // Reload user to refresh emailVerified status
+    await user!.reload();
+    user = _auth.currentUser;
 
-      notifyListeners();
-      return null;
-    } catch (e) {
-      if (kDebugMode) print('Google sign-in error: $e');
-      return 'An error occurred during Google sign-in.';
+    final userDoc = await _firestore.collection('users').doc(user!.uid).get();
+    if (!userDoc.exists) {
+      await _firestore.collection('users').doc(user!.uid).set({
+        'userId': user!.uid,
+        'name': user!.displayName ?? 'No Name',
+        'email': user!.email ?? '',
+        'role': 'user',
+        'address': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
+
+    // No email verification sent here for Google sign-in
+    await _saveFcmTokenToFirestore();
+
+    notifyListeners();
+    return null;
+  } catch (e) {
+    if (kDebugMode) print('Google sign-in error: $e');
+    return 'An error occurred during Google sign-in.';
   }
+}
+
 
   /// Logout
-  Future<void> logout() async {
-    print('Logging out...');
-    await _auth.signOut();
-    await _googleSignIn.signOut();
-    user = null;
-    notifyListeners();
+Future<void> logout() async {
+  print('Logging out...');
+  try {
+    await _googleSignIn.signOut(); // Google logout (safe to call even if not used)
+  } catch (e) {
+    if (kDebugMode) print('Google sign out error: $e');
   }
+
+  await _auth.signOut();
+
+  // ✅ DO NOT set user = null manually
+  // ✅ Let authStateChanges handle it
+
+  notifyListeners(); // Optional trigger for UI updates
+}
+
+
 }
