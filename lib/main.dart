@@ -12,7 +12,6 @@ import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/fuel_screen.dart';
 import 'screens/order_tracking_screen.dart';
-// import 'screens/lubricants_screen.dart';
 import 'screens/breakdown_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/order_screen.dart';
